@@ -13,6 +13,9 @@ class SAMPQuery {
   /// The opcode of this request.
   Opcode? _opcode;
 
+  /// The ip of server
+  String? _address;
+
   /// A list of current server information.
   final List<Info>? infos;
 
@@ -25,6 +28,7 @@ class SAMPQuery {
   Future<SAMPQuery> send(String address, int port,
       {Opcode opcode = Opcode.INFO}) async {
     _opcode = opcode;
+    _address = '$address:$port';
 
     final addresses = await InternetAddress.lookup(address);
 
@@ -99,6 +103,8 @@ class SAMPQuery {
     /// Parse the informations.
     var infos = <Info>[];
 
+    //infos.first.address = '$address:$port';
+
     var buf = ByteArray(_packet!.data);
 
     // Returns the server info.
@@ -153,6 +159,7 @@ class SAMPQuery {
 
     infos.add(
       Info(
+        _address,
         password,
         players,
         maxPlayers,

@@ -5,6 +5,9 @@ part of samp_query;
 
 /// An instance of info.
 class Info {
+  /// Ip of the server
+  String? address;
+
   /// Does the server uses a password?
   int password;
 
@@ -24,6 +27,7 @@ class Info {
   String language;
 
   Info(
+    this.address,
     this.password,
     this.players,
     this.maxPlayers,
