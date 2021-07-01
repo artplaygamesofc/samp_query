@@ -8,8 +8,6 @@ class SAMPQuery {
   /// The offset in the packet
   int offset;
 
-  late final RawDatagramSocket datagramSocket;
-
   /// The opcode of this request.
   Opcode? _opcode;
 
@@ -41,7 +39,7 @@ class SAMPQuery {
 
     /// Init datagram socket to anyIPv4
     /// and to port 0.
-    datagramSocket = await RawDatagramSocket.bind(clientAddress, 0);
+    final datagramSocket = await RawDatagramSocket.bind(clientAddress, 0);
 
     final packet = <int>[];
 
