@@ -103,8 +103,6 @@ class SAMPQuery {
     /// Parse the informations.
     var infos = <Info>[];
 
-    //infos.first.address = '$address:$port';
-
     var buf = ByteArray(_packet!.data);
 
     // Returns the server info.
