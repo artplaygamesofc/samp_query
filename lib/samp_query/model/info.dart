@@ -1,4 +1,4 @@
-// Copyright 2021-2022 Marlon "Eiss" Lorram (eiss@artplay.games).
+// Copyright 2021 Marlon Lorram [marlonlorram96@gmail.com].
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
