@@ -6,34 +6,34 @@ part of samp_query;
 
 /// An instance of server query results.
 class Info {
-	/// Ip of the server
-	String? address;
+  /// Ip of the server
+  String? address;
 
-	/// Does the server uses a password?
-	int password;
+  /// Does the server uses a password?
+  int password;
 
-	/// Current amount of players online on the server.
-	int players;
+  /// Current amount of players online on the server.
+  int players;
 
-	/// Maximum amount of players that can join the server.
-	int maxPlayers;
+  /// Maximum amount of players that can join the server.
+  int maxPlayers;
 
-	/// Hostname of the server.
-	String hostname;
+  /// Hostname of the server.
+  String hostname;
 
-	/// Gamemode of the server.
-	String gamemode;
+  /// Gamemode of the server.
+  String gamemode;
 
-	/// Language of the server.
-	String language;
+  /// Language of the server.
+  String language;
 
-	Info(
-		this.address,
-		this.password,
-		this.players,
-		this.maxPlayers,
-		this.hostname,
-		this.gamemode,
-		this.language,
-	);
+  Info(
+    this.address,
+    this.password,
+    this.players,
+    this.maxPlayers,
+    this.hostname,
+    this.gamemode,
+    this.language,
+  );
 }
