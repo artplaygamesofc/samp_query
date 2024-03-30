@@ -1,6 +1,6 @@
 name: samp_query
 description: A package that implements the SA:MP query mechanism for getting data about a running server. Written in pure Dart.
-version: 0.1.0
+version: 0.1.4
 homepage: https://github.com/artplaygamesofc/samp_query
 
 environment:
