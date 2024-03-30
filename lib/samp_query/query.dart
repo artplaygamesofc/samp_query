@@ -1,168 +1,155 @@
 // Copyright 2021-2022 Marlon "Eiss" Lorram (eiss@artplay.games).
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 part of samp_query;
 
-/// This class handles the SA:MP query mechanism.
+/// Handles SA:MP server queries.
+///
+/// This class is designed to communicate with SA:MP (San Andreas Multiplayer) servers
+/// to retrieve information.
 class SAMPQuery {
-  /// The offset in the packet
-  int offset;
+	/// Sends a query to the specified SA:MP server and returns server information.
+	///
+	/// It attempts to send the query up to [maxRetries] times in case of failures.
+	/// Returns [Info] containing the server's details or null if the query fails.
+	Future<Info?> send(Server server, {int maxRetries = 5}) async {
+		final _address = InternetAddress.tryParse(server.address);
+		if (_address == null) {
+			return null;
+		}
 
-  /// The opcode of this request.
-  Opcode? _opcode;
+		for (int attempt = 0; attempt < maxRetries; attempt++) {
+			RawDatagramSocket? socket;
+			StreamSubscription<RawSocketEvent>? subscription;
 
-  /// The ip of server
-  String? _address;
+			try {
+				socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
+				final packet = _buildPacket(server);
+				socket.send(packet, _address, server.port);
 
-  /// A list of current server information.
-  final List<Info>? infos;
+				final completer = Completer<Info>();
+				subscription = _handleSocketEvents(socket, completer, server);
 
-  SAMPQuery({
-    this.infos,
-  }) : offset = 0;
+				return await completer.future.timeout(
+					const Duration(seconds: 1),
+				);
+			} catch (_) {
+				if (attempt == maxRetries - 1) {
+					return null;
+				}
+			} finally {
+				await subscription?.cancel();
+				socket?.close();
+			}
+		}
 
-  /// send writes a SA:MP format query with the specified opcode,
-  /// returns the raw response bytes.
-  Future<SAMPQuery> send(String address, int port,
-      {Opcode opcode = Opcode.INFO}) async {
-    _opcode = opcode;
-    _address = '$address:$port';
+		return null;
+	}
 
-    final addresses = await InternetAddress.lookup(address);
+	/// Handles the socket events to process the server's response.
+	///
+	/// Listens for the read events from the socket and processes the incoming datagram
+	/// to extract the server information.
+	StreamSubscription<RawSocketEvent> _handleSocketEvents(
+		RawDatagramSocket socket,
+		Completer<Info> completer,
+		Server server,
+	) {
+		return socket.listen((event) {
+			if (event == RawSocketEvent.read) {
+				final datagram = socket.receive();
 
-    if (addresses.isEmpty) {
-      return Future.error('Could not resolve address for $address.');
-    }
+				if (datagram != null && datagram.address.address == server.address) {
+					final serverInfo =
+							_getInfo(datagram, '${server.address}/${server.port}');
 
-    final serverAddress = addresses.first;
-    final clientAddress = InternetAddress.anyIPv4;
+					completer.complete(serverInfo);
+					socket.close();
+				}
+			}
+		}, onError: (e) {
+			socket.close();
+			completer.completeError(e);
+		}, onDone: () {
+			socket.close();
+		});
+	}
 
-    /// Init datagram socket to anyIPv4
-    /// and to port 0.
-    final datagramSocket = await RawDatagramSocket.bind(clientAddress, 0);
+	/// Builds a packet for sending a query to the SA:MP server.
+	///
+	/// Constructs a byte array according to the SA:MP server query protocol.
+	List<int> _buildPacket(Server server) {
+		final packet = <int>[];
 
-    final packet = <int>[];
+		/// Add the characters 'S', 'A', 'M' and 'P' to the packet.
+		packet.addAll('SAMP'.codeUnits);
 
-    /// SAMP
-    packet.add('S'.codeUnitAt(0));
-    packet.add('A'.codeUnitAt(0));
-    packet.add('M'.codeUnitAt(0));
-    packet.add('P'.codeUnitAt(0));
+		/// Split the IP address into parts.
+		final ipParts = server.address.split('.');
+		if (ipParts.length != 4) {
+			return packet;
+		}
 
-    /// Write the ip 4 bytes to the server.
-    final ip = address.split('.');
+		/// Add each part of the IP address to the packet.
+		for (var ipPart in ipParts) {
+			packet.add(int.parse(ipPart));
+		}
 
-    if (ip.length != 4) {
-      return Future.error('IP has an invalid length.');
-    }
+		packet.add(server.port & 0xFF);
+		packet.add(server.port >> 8 & 0xFF);
+		packet.add('i'.codeUnitAt(0));
 
-    for (final ipPart in ip) {
-      packet.add(int.parse(ipPart));
-    }
+		return packet;
+	}
 
-    /// Write the port into the buffer.
-    packet.add(port & 15);
-    packet.add(port >> 8 & 15);
+	/// Processes the received datagram and extracts the server information.
+	///
+	/// Parses the datagram according to the SA:MP query response format to obtain
+	/// and return detailed server information.
+	Info _getInfo(Datagram responsePacket, String address) {
+		var data = responsePacket.data;
 
-    /// Write the opcode into the buffer.
-    packet.add(_opcode!.opcode.codeUnitAt(0));
+		// Skip the first 11 bytes.
+		var offset = 11;
 
-    /// Send buffer packet to the address [serverAddress]
-    /// and port [port].
-    datagramSocket.send(
-      packet,
-      serverAddress,
-      port,
-    );
+		// Check if the data is long enough before trying to read it.
+		if (data.length < offset + 5) {
+			throw Exception('Response packet is shorter than expected.');
+		}
 
-    /// Receive packet from socket.
-    Datagram? _packet;
+		// Parse the informations.
+		final password = data[offset];
+		final players = data[offset + 1] | (data[offset + 2] << 8);
+		final maxPlayers = data[offset + 3] | (data[offset + 4] << 8);
 
-    final receivePacket = (RawSocketEvent event) {
-      if (event == RawSocketEvent.read) {
-        _packet = datagramSocket.receive();
-      }
-      return _packet != null;
-    };
+		offset += 5;
 
-    try {
-      await datagramSocket
-          .timeout(Duration(milliseconds: 2000))
-          .firstWhere(receivePacket);
-    } catch (e) {
-      rethrow;
-    } finally {
-      datagramSocket.close();
-    }
+		// Read the hostname.
+		final hostnameLen = data[offset] | (data[offset + 1] << 8);
+		offset += 4;
+		final hostname = String.fromCharCodes(data, offset, offset + hostnameLen);
+		offset += hostnameLen;
 
-    /// Skip the first 11 bytes.
-    offset += 11;
+		// Read the gamemode.
+		final gamemodeLen = data[offset] | (data[offset + 1] << 8);
+		offset += 4;
+		final gamemode = String.fromCharCodes(data, offset, offset + gamemodeLen);
+		offset += gamemodeLen;
 
-    /// Parse the informations.
-    var infos = <Info>[];
+		// Read the language.
+		final languageLen = data[offset] | (data[offset + 1] << 8);
+		offset += 4;
+		final language = String.fromCharCodes(data, offset, offset + languageLen);
 
-    var buf = ByteArray(_packet!.data);
-
-    // Returns the server info.
-    _parseInfo(
-      buf,
-      infos,
-    );
-
-    return SAMPQuery(
-      infos: infos,
-    );
-  }
-
-  /// This internal method constructs a correctly
-  /// returns the core server info.
-  void _parseInfo(ByteArray buffer, List<Info> infos) {
-    /// Is the server using a password?
-    final password = buffer.readUnsignedByte(offset);
-
-    /// Players on the server.
-    final players = buffer.readUnsignedShort(offset += 1);
-
-    /// Player count the server allows.
-    final maxPlayers = buffer.readUnsignedShort(offset += 2);
-
-    /// Hostname lenght.
-    final hostnameLen = buffer.readUnsignedShort(offset += 2);
-
-    /// Hostname.
-    final hostname = buffer.readString(
-      offset += 4,
-      offset += hostnameLen,
-    );
-
-    /// Gamemode lenght.
-    final gamemodeLen = buffer.readUnsignedShort(offset);
-
-    /// Gamemode.
-    final gamemode = buffer.readString(
-      offset += 4,
-      offset += gamemodeLen,
-    );
-
-    /// Language lenght.
-    final languageLen = buffer.readUnsignedShort(offset);
-
-    /// Language.
-    final language = buffer.readString(
-      offset += 4,
-      offset += languageLen,
-    );
-
-    infos.add(
-      Info(
-        _address,
-        password,
-        players,
-        maxPlayers,
-        hostname,
-        gamemode,
-        language,
-      ),
-    );
-  }
+		return Info(
+			address,
+			password,
+			players,
+			maxPlayers,
+			hostname,
+			gamemode,
+			language,
+		);
+	}
 }

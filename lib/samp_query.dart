@@ -5,9 +5,7 @@ library samp_query;
 
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
-part 'samp_query/utils/utils.dart';
-part 'samp_query/query.dart';
+part 'samp_query/model/server.dart';
 part 'samp_query/model/info.dart';
-part 'samp_query/model/opcode.dart';
+part 'samp_query/query.dart';
