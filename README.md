@@ -28,7 +28,7 @@ import 'package:samp_query/samp_query.dart';
 void main() async {
   var query = SAMPQuery();
 
-  final server = Server('ip.artplay.games', 7777);
+  final server = Server('ip.artplaysamp.com', 7777);
 
   // Replace 'ip.artplay.games' with the IP of the server you want to query
   var results = await query.send(server);
@@ -51,8 +51,8 @@ void main() async {
   var query = SAMPQuery();
 
   final servers = [
-    Server('ip.artplay.games', 7777),
-    Server('ip.artplay.games', 7778),
+    Server('ip.artplaysamp.com', 7777),
+    Server('ip.artplaysamp.com', 7778),
   ];
 
   // Creates a list of futures for querying multiple servers
