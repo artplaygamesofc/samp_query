@@ -7,10 +7,10 @@ part of samp_query;
 /// An instance of server.
 class Server {
   /// Ip of the server.
-  late final String address;
+  String address;
 
   /// Port of the server.
-  late final int port;
+  int port;
 
   Server(
     this.address,

@@ -19,7 +19,7 @@ class SAMPQuery {
       return null;
     }
 
-    for (int attempt = 0; attempt < maxRetries; attempt++) {
+    for (var attempt = 0; attempt < maxRetries; attempt++) {
       RawDatagramSocket? socket;
       StreamSubscription<RawSocketEvent>? subscription;
 

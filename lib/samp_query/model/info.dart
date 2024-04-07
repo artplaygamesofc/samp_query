@@ -7,7 +7,7 @@ part of samp_query;
 /// An instance of server query results.
 class Info {
   /// Ip of the server
-  String? address;
+  String address;
 
   /// Does the server uses a password?
   int password;
