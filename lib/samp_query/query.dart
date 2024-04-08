@@ -62,7 +62,7 @@ class SAMPQuery {
 
         if (datagram != null && datagram.address.address == server.address) {
           final serverInfo =
-              _getInfo(datagram, '${server.address}/${server.port}');
+              _getInfo(datagram, '${server.address}:${server.port}');
 
           completer.complete(serverInfo);
           socket.close();
